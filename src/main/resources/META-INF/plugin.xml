@@ -1,0 +1,51 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>dev.bifunctor</id>
+    <name>BiFunctor</name>
+    <vendor>Sergey Tselovalnikov</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>Git4Idea</depends>
+    <depends config-file="plugin-java.xml">com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <projectService
+                serviceInterface="dev.bifunctor.ide.agent.SelectionService"
+                serviceImplementation="dev.bifunctor.ide.agent.SelectionServiceImpl"/>
+
+        <projectService
+                serviceInterface="dev.bifunctor.ide.agent.LlmService"
+                serviceImplementation="dev.bifunctor.ide.agent.LlmServiceImpl"/>
+
+        <projectService
+                serviceInterface="dev.bifunctor.ide.agent.ContextCollector"
+                serviceImplementation="dev.bifunctor.ide.agent.ContextCollectorImpl"/>
+
+        <projectService
+                serviceInterface="dev.bifunctor.ide.agent.ToolService"
+                serviceImplementation="dev.bifunctor.ide.agent.ToolServiceImpl"/>
+
+        <applicationConfigurable
+                instance="dev.bifunctor.ide.ui.settings.BifSettingsConfigurable"
+                displayName="BiFunctor Settings"/>
+
+        <!--suppress PluginXmlValidity -->
+        <applicationInitializedListener
+                implementation="dev.bifunctor.ide.ui.settings.BifAppInitializedListener"/>
+
+        <toolWindow
+                id="BiFunctor"
+                anchor="right"
+                factoryClass="dev.bifunctor.ide.ui.components.chat.BifChatWindow"/>
+
+        <inline.completion.provider
+                implementation="dev.bifunctor.ide.completion.BifCompletionProvider"/>
+    </extensions>
+
+    <actions>
+        <!-- TODO: create an icon and a shortcuts -->
+        <action id="dev.bifunctor.ide.ui.selection.SendSelectionToChat"
+                class="dev.bifunctor.ide.ui.selection.SendSelectionToChat"
+                text="Send To Chat"/>
+    </actions>
+</idea-plugin>

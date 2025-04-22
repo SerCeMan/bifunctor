@@ -1,0 +1,42 @@
+[versions]
+# libraries
+junit = "4.13.2"
+langchain4j = "1.0.0-beta2"
+jewel = "0.27.0"
+assertj = "3.27.3"
+jackson = "2.18.3"
+multiplatformMarkdownRenderer = "0.33.0-rc01"
+
+# plugins
+changelog = "2.2.1"
+# upgrading to 2.3.0 causes random failures, TODO: do a deep dive.
+intelliJPlatform = "2.2.1"
+kotlin = "2.1.10"
+compose = "1.7.3"
+kover = "0.9.1"
+qodana = "2024.3.4"
+
+[libraries]
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+langchain4j = { group = "dev.langchain4j", name = "langchain4j", version.ref = "langchain4j" }
+langchain4j-openai = { group = "dev.langchain4j", name = "langchain4j-open-ai", version.ref = "langchain4j" }
+langchain4j-anthropic = { group = "dev.langchain4j", name = "langchain4j-anthropic", version.ref = "langchain4j" }
+# TODO: now that jewel has been moved to its new home in intellij-community, we need
+#   to move it as well, once it's clear how to reference the standalone version.
+jewel = { group = "org.jetbrains.jewel", name = "jewel-ide-laf-bridge-243", version.ref = "jewel" }
+jewel-standalone = { group = "org.jetbrains.jewel", name = "jewel-int-ui-standalone-243", version.ref = "jewel" }
+jewel-decorated-window = { group = "org.jetbrains.jewel", name = "jewel-int-ui-decorated-window-243", version.ref = "jewel" }
+assertj = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
+jackson-core = { group = "com.fasterxml.jackson.core", name = "jackson-core", version.ref = "jackson" }
+jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }
+multiplatform-markdown-renderer = { group = "com.mikepenz", name = "multiplatform-markdown-renderer", version.ref = "multiplatformMarkdownRenderer" }
+multiplatform-markdown-renderer-code = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-code", version.ref = "multiplatformMarkdownRenderer" }
+
+[plugins]
+changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
+intelliJPlatform = { id = "org.jetbrains.intellij.platform", version.ref = "intelliJPlatform" }
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-plugin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose = { id = "org.jetbrains.compose", version.ref = "compose" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+qodana = { id = "org.jetbrains.qodana", version.ref = "qodana" }

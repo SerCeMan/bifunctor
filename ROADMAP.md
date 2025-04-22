@@ -1,0 +1,23 @@
+## Roadmap
+
+- Interactive agent mode
+    - The write actions should fix linting errors
+    - Smart mode for making file changes instead of overriding the whole file.
+    - Agent Planning step
+    - Token cost estimation
+    - Settings for the auto-accept mode
+- Auto Completion
+    - Collect local context
+- Usable UX
+    - Selection + Chat
+        - Ensure the initial context and the follow-up contexts are properly separated
+        - Ensure the context doesn't blow through the limit
+        - A shortcut for send selection
+    - Add Missing Tools
+        - Git tools
+    - At@ for diffs, files, ec.
+- Bugs
+    - Make the view work while the indexes are being built
+- Minor things
+    - Grouping by Provider in the model dropdown
+    - Iconify buttons similarly to copilot, etc.
