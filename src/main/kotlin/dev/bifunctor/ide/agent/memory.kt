@@ -6,6 +6,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import dev.langchain4j.data.message.*
 import dev.langchain4j.memory.ChatMemory
 import org.jetbrains.jewel.ui.icon.IconKey
+import java.util.*
 
 sealed class LlmContent
 
@@ -47,6 +48,8 @@ data class LlmErrorMessage(val text: String) : LlmMessage()
 
 interface LlmMessageList {
   val llmMessages: SnapshotStateList<LlmMessage>
+
+  fun addMessageListener(listener: (LlmMessage) -> Unit): () -> Unit
 }
 
 class BifChatMemory( //
@@ -56,12 +59,24 @@ class BifChatMemory( //
 ) : ChatMemory, LlmMessageList {
 
   override val llmMessages: SnapshotStateList<LlmMessage> = mutableStateListOf()
+  private val listeners = Collections.synchronizedList(mutableListOf<(LlmMessage) -> Unit>())
+
+  override fun addMessageListener(listener: (LlmMessage) -> Unit): () -> Unit {
+    listeners.add(listener)
+    return {
+      listeners.remove(listener)
+    }
+  }
 
   override fun id() = delegate.id()
 
   override fun add(message: ChatMessage) {
-    llmMessages.add(mapMessage(message))
+    val mappedMessage = mapMessage(message)
+    llmMessages.add(mappedMessage)
     delegate.add(message)
+    for (listener in listeners) {
+      listener(mappedMessage)
+    }
   }
 
   @Suppress("USELESS_CAST")

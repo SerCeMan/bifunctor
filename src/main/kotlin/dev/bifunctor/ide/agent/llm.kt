@@ -99,6 +99,14 @@ class ConversationImpl(
       isResponding.value = true
     }
     val sb = StringBuilder()
+    val removeListener = messageList.addMessageListener {
+      CoroutineScope(Dispatchers.Main).launch {
+        // the incomplete message is cleared in the listener as the TokenStream doesn't provide
+        // a way to clear the message that was accumulated in the partial response between tool calls.
+        sb.clear()
+        incompleteMessage.value = null
+      }
+    }
     try {
       assistant.chat(id, message) //
         .onPartialResponse { res ->
@@ -106,12 +114,12 @@ class ConversationImpl(
             incompleteMessage.value = IncomingLlmMessage(
               text = (incompleteMessage.value?.text ?: "") + res
             )
+            sb.append(res)
           }
-          sb.append(res)
         }.onCompleteResponse {
           CoroutineScope(Dispatchers.Main).launch {
             isResponding.value = false
-            incompleteMessage.value = null
+            removeListener()
             if (!sb.contains(Prompts.COMPLETION_MARKER) && !agenticLoop.isInterrupted.get()) {
               executeLoop(
                 "keep trying, and make sure to include the ${Prompts.COMPLETION_MARKER} when the response is final.",
@@ -121,14 +129,15 @@ class ConversationImpl(
             }
           }
         }.onError { e ->
-          handleError(e)
+          handleError(e, removeListener)
         }.start()
     } catch (e: Throwable) {
-      handleError(e)
+      handleError(e, removeListener)
     }
   }
 
-  private fun handleError(e: Throwable) {
+  private fun handleError(e: Throwable, removeListener: () -> Unit) {
+    removeListener()
     CoroutineScope(Dispatchers.Main).launch {
       isResponding.value = false
       val errorMessage = e.message ?: "Unknown error"
