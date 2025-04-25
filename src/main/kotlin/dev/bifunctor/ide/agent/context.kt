@@ -1,5 +1,6 @@
 package dev.bifunctor.ide.agent
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -37,7 +38,7 @@ interface ContextCollector {
 }
 
 class ContextCollectorImpl(private val project: Project) : ContextCollector {
-  private val recentFilesService = RecentFilesService.getInstance(project)
+  private val recentFilesService = project.service<RecentFilesService>()
 
   override fun collectProjectContext(): QueryContext {
     val recentFiles = recentFilesService.getRecentFiles()
