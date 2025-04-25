@@ -98,12 +98,11 @@ class ConversationImpl(
     CoroutineScope(Dispatchers.Main).launch {
       isResponding.value = true
     }
-    val sb = StringBuilder()
+    val completeLoopText = StringBuilder()
     val removeListener = messageList.addMessageListener {
       CoroutineScope(Dispatchers.Main).launch {
         // the incomplete message is cleared in the listener as the TokenStream doesn't provide
         // a way to clear the message that was accumulated in the partial response between tool calls.
-        sb.clear()
         incompleteMessage.value = null
       }
     }
@@ -114,13 +113,13 @@ class ConversationImpl(
             incompleteMessage.value = IncomingLlmMessage(
               text = (incompleteMessage.value?.text ?: "") + res
             )
-            sb.append(res)
+            completeLoopText.append(res)
           }
         }.onCompleteResponse {
           CoroutineScope(Dispatchers.Main).launch {
             isResponding.value = false
             removeListener()
-            if (!sb.contains(Prompts.COMPLETION_MARKER) && !agenticLoop.isInterrupted.get()) {
+            if (!completeLoopText.contains(Prompts.COMPLETION_MARKER) && !agenticLoop.isInterrupted.get()) {
               executeLoop(
                 "keep trying, and make sure to include the ${Prompts.COMPLETION_MARKER} when the response is final.",
                 maxAttempts - 1,
