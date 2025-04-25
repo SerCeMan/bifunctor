@@ -205,11 +205,13 @@ class ShellTool(override val project: Project) : BifTool {
     name = "runShellCommand", value = ["Executes a shell command in IntelliJ's integrated terminal."]
   )
   fun runCommand(command: String): String = executeTool(timeout = 1000.seconds) {
-    val processBuilder = ProcessBuilder("bash", "-c", command)
+    val shell = System.getenv("SHELL") ?: "/bin/bash"
+    // include -l to read the startup files
+    val processBuilder = ProcessBuilder(shell, "-l", "-c", command)
     processBuilder.directory(Paths.get(projectBasePath).toFile())
     processBuilder.redirectErrorStream(true)
     val process = processBuilder.start()
-    val output = process.inputStream.bufferedReader().use { it.readText() }
+    val output = process.inputStream.bufferedReader().readText()
     val exitCode = process.awaitExit()
     if (exitCode != 0) {
       throw RuntimeException("Command '$command' failed with exit code $exitCode. Output:\n$output")
