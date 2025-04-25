@@ -25,6 +25,10 @@ data class QueryContext(
       resolvedSelection = (resolvedSelection + another.resolvedSelection).distinct()
     )
   }
+
+  fun allFiles(): List<VirtualFile> {
+    return (recentFiles + resolvedSelection.map { it.containingFile.virtualFile }).distinct()
+  }
 }
 
 interface ContextCollector {

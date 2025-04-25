@@ -1,5 +1,6 @@
 package dev.bifunctor.ide.agent
 
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.readText
 import dev.langchain4j.model.Tokenizer
 
@@ -8,14 +9,16 @@ private val CONTEXT_PLACEHOLDER = "<@context@>"
 class Prompt(
   private val template: String,
 ) {
-  fun render(tokenizer: Tokenizer, maxTokens: Int, ctx: QueryContext): String {
+  fun render(tokenizer: Tokenizer, maxTokens: Int, ctx: QueryContext, ruleService: AiRuleService): String {
     // never take more than 1/8 of the max tokens for the context
     val maxTokenLen = maxTokens / 8
-    val contextPrompt = asPromptPart(ctx, maxTokenLen, tokenizer)
+    val contextPrompt = asPromptPart(ctx, maxTokenLen, ruleService, tokenizer)
     return template.replace(CONTEXT_PLACEHOLDER, contextPrompt)
   }
 
-  private fun asPromptPart(ctx: QueryContext, maxTokenLen: Int, tokenizer: Tokenizer): String {
+  private fun asPromptPart(
+    ctx: QueryContext, maxTokenLen: Int, ruleService: AiRuleService, tokenizer: Tokenizer
+  ): String {
     val recentFiles = ctx.recentFiles
     val selection = ctx.selection
     val resolvedSelection = ctx.resolvedSelection
@@ -28,6 +31,7 @@ class Prompt(
       promptBuilder.append(selection)
       promptBuilder.append("\n</selection>")
     }
+    val includedFiles = mutableListOf<VirtualFile>()
     if (relevantFiles.isNotEmpty()) {
       promptBuilder.append("<relevant_files>\n")
       relevantFiles //
@@ -38,8 +42,18 @@ class Prompt(
         .forEach { file ->
           promptBuilder.appendLine(file.path)
           promptBuilder.appendLine(file.readText())
+          includedFiles.add(file)
         }
       promptBuilder.append("</relevant_files>\n")
+    }
+    val aiRules = ruleService.getRulesForFiles(includedFiles)
+    if (includedFiles.isNotEmpty()) {
+      promptBuilder.append("<ai_rules>\n")
+      // always include all relevant rules
+      for (rule in aiRules) {
+        promptBuilder.appendLine(rule.content)
+      }
+      promptBuilder.append("</ai_rules>\n")
     }
     return promptBuilder.toString()
   }
@@ -51,6 +65,16 @@ object Prompts {
   const val CARET_RESPONSE = "<caret>{response}</caret>"
   const val CARET = """<caret/>"""
 
+  private fun contextPlaceholder(): String = """
+      The IDE has provided the following context that might be helpful to you. The might include: 
+      * selection – the text that is currently selected in the editor
+      * recent files – the files that the user has recently opened
+      * ai_rules – the project rules you must follow precisely.
+      <context>
+      $CONTEXT_PLACEHOLDER
+      </context>
+    """.trimIndent()
+
   fun promptConversation(task: String): Prompt {
     return Prompt(
       """
@@ -61,10 +85,7 @@ object Prompts {
         $task
         </task>
         
-        The user has recently opened the following files in their IDE:
-        <context>
-        $CONTEXT_PLACEHOLDER
-        </context>
+        ${contextPlaceholder()}
         Once you have completed the task, respond with "$COMPLETION_MARKER".
     """.trimIndent()
     )
@@ -78,10 +99,7 @@ object Prompts {
         $caretContext
         </caretContext>
         
-        The user has recently opened the following files in their IDE:
-        <context>
-        $CONTEXT_PLACEHOLDER
-        </context>
+        ${contextPlaceholder()}
         Reply with the response that will be inserted in between the caret tags.
     """.trimIndent()
     )

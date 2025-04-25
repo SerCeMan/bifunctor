@@ -58,27 +58,30 @@ class ConversationImpl(
   private val messageList: LlmMessageList,
   private val maxTokens: Int,
   private val tokenizer: Tokenizer,
+  private val ruleService: AiRuleService,
   private val project: Project,
 ) : Conversation {
   override val convCtx: MutableState<QueryContext> = mutableStateOf(QueryContext())
   override val incompleteMessage: MutableState<IncomingLlmMessage?> = mutableStateOf(null)
   override val messages: SnapshotStateList<LlmMessage> = messageList.llmMessages
   override val isResponding: MutableState<Boolean> = mutableStateOf(false)
-  private var hastStarted = false
+  private var hasStarted = false
 
   override fun runAgenticLoop(message: String, queryContext: QueryContext?): AgenticLoopImpl {
-    val projectContext = contextCollector.collectProjectContext()
-
-    val initialContext = projectContext.merge(queryContext)
-    addContext(initialContext)
-
     val textPrompt = when {
-      hastStarted -> message
+      hasStarted -> message
       else -> {
+        // TODO: manage the context beyond the first message.
+        val projectContext = contextCollector.collectProjectContext()
+        val initialContext = projectContext.merge(queryContext)
+        addContext(initialContext)
+
         val prompt = Prompts.promptConversation(message)
-        prompt.renderWithRules(tokenizer, maxTokens, convCtx.value, project)
+        val currConvContext: QueryContext = convCtx.value
+        prompt.render(tokenizer, maxTokens, currConvContext, ruleService)
       }
     }
+    hasStarted = true
     val agenticLoop = AgenticLoopImpl()
     executeLoop(textPrompt, maxMessages, agenticLoop)
     return agenticLoop
@@ -190,6 +193,7 @@ class LlmServiceImpl(private val project: Project) : LlmService {
   private val llmKeyService = service<LlmKeyService>()
   private val toolStateService = service<ToolStateService>()
   private val contextCollector = project.service<ContextCollector>()
+  private val ruleService: AiRuleService = project.service<AiRuleService>()
 
   override val initializedState: MutableState<Boolean>
     get() = llmKeyService.initializedState
@@ -229,7 +233,7 @@ class LlmServiceImpl(private val project: Project) : LlmService {
       .toolProvider(tools)
       .build()
 
-    return ConversationImpl(convId, contextCollector, assistant, maxMessages, memory, maxTokens, tokenizer, project)
+    return ConversationImpl(convId, contextCollector, assistant, maxMessages, memory, maxTokens, tokenizer, ruleService, project)
   }
 
   private fun chooseTokenizer(model: LlmModel): Tokenizer {
@@ -244,7 +248,7 @@ class LlmServiceImpl(private val project: Project) : LlmService {
 
   override fun askModel(model: LlmModel, prompt: Prompt, projectContext: QueryContext): Flow<String> = callbackFlow {
     val tokenizer = chooseTokenizer(model)
-    val textPrompt = prompt.renderWithRules(tokenizer, model.maxTokens, projectContext, project)
+    val textPrompt = prompt.render(tokenizer, model.maxTokens, projectContext, ruleService)
     if (textPrompt.isBlank()) {
       // Nothing to do
       close()
