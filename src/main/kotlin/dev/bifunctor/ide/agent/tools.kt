@@ -23,14 +23,17 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.diff.impl.patch.IdeaTextPatchBuilder
 import com.intellij.openapi.diff.impl.patch.UnifiedDiffWriter
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ChangeListManager
+import com.intellij.openapi.vcs.changes.ChangesViewRefresher
 import com.intellij.openapi.vcs.changes.CurrentContentRevision
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiNamedElement
 import com.intellij.psi.search.GlobalSearchScope
@@ -180,6 +183,9 @@ interface BifTool {
       } catch (e: TimeoutCancellationException) {
         LOG.warn("The tool $name timed out after $timeout", e)
         throw RuntimeException("Timeout after $timeout")
+      } catch (e: Exception) {
+        LOG.error("The tool $name invocation failed", e)
+        throw e
       }
     }
   }
@@ -311,7 +317,20 @@ class LocalDiffTool(override val project: Project) : BifTool {
     calcDiff()
   }
 
+  fun refreshFs() {
+    ApplicationManager.getApplication().invokeAndWait {
+      ApplicationManager.getApplication().runWriteAction {
+        FileDocumentManager.getInstance().saveAllDocuments()
+        for (refresher in ChangesViewRefresher.EP_NAME.getExtensionList(project)) {
+          refresher.refresh(project)
+        }
+        VirtualFileManager.getInstance().syncRefresh()
+      }
+    }
+  }
+
   private fun calcDiff(): String {
+    refreshFs()
     val changeManager = ChangeListManager.getInstance(project)
     // (A) Gather tracked changes from the default changelist
     val trackedChanges = changeManager.defaultChangeList.changes
