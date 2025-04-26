@@ -1,0 +1,10 @@
+{
+    "rules": [
+        {
+            "id": "cursor-test-rule",
+            "description": "Test rule for cursor position",
+            "condition": "cursor is within a method",
+            "action": "suggest method completion"
+        }
+    ]
+}

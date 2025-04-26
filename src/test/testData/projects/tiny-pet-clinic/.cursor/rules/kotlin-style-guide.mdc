@@ -1,0 +1,6 @@
+---
+description: Ensure KDoc
+globs: src/main/java/**/*.kotlin
+---
+
+Make sure every kotlin file has a KDoc header.

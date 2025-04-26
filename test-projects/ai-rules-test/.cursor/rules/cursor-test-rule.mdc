@@ -1,0 +1,5 @@
+---
+description: Test rule for cursor position
+globs: **/*.java
+---
+This is a test rule content for cursor positioning.

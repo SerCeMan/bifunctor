@@ -1,9 +1,11 @@
 package dev.bifunctor.ide.agent
 
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VirtualFile
-import java.io.File
+import com.intellij.openapi.vfs.readText
 import java.nio.file.FileSystems
 import kotlin.io.path.Path
 
@@ -20,21 +22,24 @@ interface AiRuleService {
   fun getRulesForFiles(files: List<VirtualFile>): List<AiRule>
 }
 
-class AiRuleServiceImpl(private val project: Project) : AiRuleService {
+class AiRuleServiceImpl : AiRuleService {
   private val rules: List<AiRule>
   private val cursorRulesDir = ".cursor/rules"
 
-  init {
-    rules = loadRules()
+  constructor(project: Project) {
+    rules = loadRules(project.guessProjectDir())
   }
 
-  fun loadRules(): List<AiRule> {
-    val projectPath = project.basePath
-    if (projectPath == null) {
+  fun getAllRules(): List<AiRule> {
+    return rules
+  }
+
+  private fun loadRules(projectDir: VirtualFile?): List<AiRule> {
+    if (projectDir == null) {
       LOG.warn("project path is null, can't load rules")
       return emptyList()
     }
-    return loadCursorRules(projectPath)
+    return loadCursorRules(projectDir)
   }
 
   override fun getRulesForFiles(files: List<VirtualFile>): List<AiRule> {
@@ -51,24 +56,32 @@ class AiRuleServiceImpl(private val project: Project) : AiRuleService {
     }
   }
 
-  private fun loadCursorRules(projectPath: String): List<AiRule> {
-    val rulesDir = File(projectPath, cursorRulesDir)
-    if (!rulesDir.exists() || !rulesDir.isDirectory) {
-      return emptyList()
-    }
+  private fun loadCursorRules(projectDir: VirtualFile): List<AiRule> =
+    ReadAction.compute<List<AiRule>, RuntimeException> {
+      val rulesRoot = projectDir.findFileByRelativePath(cursorRulesDir)
+      when (rulesRoot) {
+        null -> {
+          LOG.warn("No rules found in .cursor/rules")
+          return@compute emptyList()
+        }
 
-    val ruleFiles = rulesDir.listFiles { file -> file.isFile && file.extension == "mdc" } ?: return emptyList()
-    return ruleFiles.mapNotNull { file ->
-      try {
-        parseMdcRule(file)
-      } catch (e: Exception) {
-        LOG.warn("Failed to parse rule file: ${file.name}", e)
-        null
+        else -> rulesRoot //
+          .children //
+          .asSequence() //
+          .filter { !it.isDirectory && it.extension.equals("mdc", true) } //
+          .mapNotNull { vf -> tryParseMdcFile(vf) } //
+          .toList()
       }
     }
+
+  private fun tryParseMdcFile(vf: VirtualFile): AiRule? = try {
+    parseMdcRule(vf)
+  } catch (e: Exception) {
+    LOG.warn("Failed to parse rule file: ${vf.name}", e)
+    null
   }
 
-  private fun parseMdcRule(file: File): AiRule? {
+  private fun parseMdcRule(file: VirtualFile): AiRule? {
     val content = file.readText()
     val lines = content.lines()
     // Parse metadata
@@ -80,6 +93,7 @@ class AiRuleServiceImpl(private val project: Project) : AiRuleService {
         line.startsWith("description:") -> {
           description += line.substringAfter("description:").trim()
         }
+
         line.startsWith("globs:") -> {
           val globLine = line.substringAfter("globs:").trim()
           if (globLine.isNotEmpty()) {
@@ -103,6 +117,8 @@ class AiRuleServiceImpl(private val project: Project) : AiRuleService {
   }
 
   fun matchGlob(glob: String, path: String): Boolean {
-    return FileSystems.getDefault().getPathMatcher("glob:${glob}").matches(Path(path))
+    val fileSystem = FileSystems.getDefault()
+    val matcher = fileSystem.getPathMatcher("glob:**/${glob}")
+    return matcher.matches(Path(path))
   }
 }

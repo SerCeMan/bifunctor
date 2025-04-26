@@ -1,0 +1,6 @@
+---
+description: Ensure JavaDoc
+globs: src/main/java/**/*.java
+---
+
+Make sure every file has a JavaDoc header.
