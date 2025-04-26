@@ -5,7 +5,7 @@ langchain4j = "1.0.0-beta2"
 jewel = "0.27.0"
 assertj = "3.27.3"
 jackson = "2.18.3"
-multiplatformMarkdownRenderer = "0.33.0-rc01"
+multiplatformMarkdownRenderer = "0.33.0"
 
 # plugins
 changelog = "2.2.1"
