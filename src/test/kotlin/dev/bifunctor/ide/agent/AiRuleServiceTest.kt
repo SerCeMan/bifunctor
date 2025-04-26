@@ -15,10 +15,10 @@ class AiRuleServiceTest : BasePlatformTestCase() {
     val service = AiRuleServiceImpl(project)
     val rules = service.getAllRules()
 
-    assertSize(3, rules)
+    assertSize(4, rules)
     assertContainsElements(
       rules.map { it.name },  //
-      "java-style-guide", "kotlin-style-guide", "general-style-guide"
+      "java-style-guide", "kotlin-style-guide", "general-style-guide", "junie-guidelines"
     )
   }
 
@@ -31,10 +31,10 @@ class AiRuleServiceTest : BasePlatformTestCase() {
 
     val matched = service.getRulesForFiles(listOf(javaFile))
 
-    assertSize(2, matched)
+    assertSize(3, matched)
     assertContainsElements(
       matched.map { it.name }, //
-      "java-style-guide", "general-style-guide"
+      "java-style-guide", "general-style-guide", "junie-guidelines"
     )
   }
 }

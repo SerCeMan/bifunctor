@@ -25,6 +25,7 @@ interface AiRuleService {
 class AiRuleServiceImpl : AiRuleService {
   private val rules: List<AiRule>
   private val cursorRulesDir = ".cursor/rules"
+  private val junieGuidelinesPath = ".junie/guidelines.md"
 
   constructor(project: Project) {
     rules = loadRules(project.guessProjectDir())
@@ -39,8 +40,31 @@ class AiRuleServiceImpl : AiRuleService {
       LOG.warn("project path is null, can't load rules")
       return emptyList()
     }
-    return loadCursorRules(projectDir)
+    val cursorRules = loadCursorRules(projectDir)
+    val junieRules = loadJunieGuidelines(projectDir)
+    return cursorRules + junieRules
   }
+
+  private fun loadJunieGuidelines(projectDir: VirtualFile): List<AiRule> =
+    ReadAction.compute<List<AiRule>, RuntimeException> {
+      val guidelinesFile = projectDir.findFileByRelativePath(junieGuidelinesPath)
+      return@compute when (guidelinesFile) {
+        null -> emptyList()
+        else -> try {
+          val content = guidelinesFile.readText()
+          val guidelines = AiRule( //
+            name = "junie-guidelines", //
+            description = "Junie Guidelines", //
+            content = content, //
+            globs = emptyList() //
+          )
+          listOf(guidelines)
+        } catch (e: Exception) {
+          LOG.warn("Failed to parse guidelines file: ${guidelinesFile.name}", e)
+          emptyList()
+        }
+      }
+    }
 
   override fun getRulesForFiles(files: List<VirtualFile>): List<AiRule> {
     val filePaths = files.map { it.path }
