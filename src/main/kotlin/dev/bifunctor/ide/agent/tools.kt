@@ -131,6 +131,9 @@ enum class ToolCapability {
   EXECUTE_SHELL_COMMANDS;
 }
 
+/** Indicates an exceptional result. */
+class ToolResultException(message: String) : Exception(message)
+
 interface BifTool {
   companion object {
     val LOG: Logger = Logger.getInstance(BifTool::class.java)
@@ -165,7 +168,7 @@ interface BifTool {
           toolStateService.awaitApproval(toolReqId)
           val state = toolStateService.getState(toolReqId)
           if (state.value == ToolState.REJECTED) {
-            throw RuntimeException("tool execution was rejected.")
+            throw ToolResultException("tool execution was rejected.")
           }
         }
 
@@ -183,6 +186,9 @@ interface BifTool {
       } catch (e: TimeoutCancellationException) {
         LOG.warn("The tool $name timed out after $timeout", e)
         throw RuntimeException("Timeout after $timeout")
+      } catch (e: ToolResultException) {
+        LOG.info("The tool $name returned an exceptional results: ${e.message}")
+        throw e
       } catch (e: Exception) {
         LOG.error("The tool $name invocation failed", e)
         throw e
@@ -220,7 +226,7 @@ class ShellTool(override val project: Project) : BifTool {
     val output = process.inputStream.bufferedReader().readText()
     val exitCode = process.awaitExit()
     if (exitCode != 0) {
-      throw RuntimeException("Command '$command' failed with exit code $exitCode. Output:\n$output")
+      throw ToolResultException("Command '$command' failed with exit code $exitCode. Output:\n$output")
     }
     output
   }
@@ -247,13 +253,13 @@ class RunTestsTool(override val project: Project) : BifTool {
     val context = ReadAction.compute<ConfigurationFromContext, Throwable> {
       val psiClass = JavaPsiFacade.getInstance(project).findClass(className, GlobalSearchScope.allScope(project))
       if (psiClass == null) {
-        throw RuntimeException("Class not found: $className")
+        throw ToolResultException("Class not found: $className")
       }
       val psiMethod =
         if (methodName.isNullOrEmpty()) null else psiClass.findMethodsByName(methodName, false).firstOrNull()
       ConfigurationContext.createEmptyContextForLocation(PsiLocation(psiMethod ?: psiClass))
         .createConfigurationsFromContext()
-        ?.first() ?: throw RuntimeException("No configuration found for class: $className")
+        ?.first() ?: throw ToolResultException("No configuration found for class: $className")
     }
     val configuration = context.configuration
     val executor = DefaultRunExecutor.getRunExecutorInstance()
@@ -420,14 +426,14 @@ class FindInFilesTool(override val project: Project) : BifTool {
 
   private fun findInFiles(text: String, dirPath: String?): String {
     if (text.isBlank()) {
-      throw RuntimeException("blank text")
+      throw ToolResultException("blank text")
     }
 
     val projectBasePath = projectBasePath
     val scope = if (!dirPath.isNullOrBlank()) {
       val (_, directoryVf) = findVirtualFileInProject(projectBasePath, dirPath)
       if (!directoryVf.isDirectory) {
-        throw RuntimeException("Provided path is not a directory: $dirPath")
+        throw ToolResultException("Provided path is not a directory: $dirPath")
       }
       GlobalSearchScopesCore.directoriesScope(project, true, directoryVf)
     } else {
@@ -477,7 +483,7 @@ class ListFilesTool(override val project: Project) : BifTool {
   fun listFiles(dirPath: String): String = executeTool {
     val (projectRoot, targetDir) = findVirtualFileInProject(projectBasePath, dirPath)
     if (!targetDir.isDirectory) {
-      throw RuntimeException("Path is not a directory: $dirPath")
+      throw ToolResultException("Path is not a directory: $dirPath")
     }
     // Collect all child paths as relative to the project root
     val childPaths = ReadAction.compute<List<String>, Throwable> {
@@ -505,14 +511,14 @@ class WriteFileTool(override val project: Project) : BifTool {
   fun writeFile(filePath: String, content: String) = executeTool {
     val projectBasePath = projectBasePath
     val projectRootVf = LocalFileSystem.getInstance().findFileByPath(projectBasePath)
-      ?: throw RuntimeException("Could not locate project root: $projectBasePath")
+      ?: throw ToolResultException("Could not locate project root: $projectBasePath")
 
     ApplicationManager.getApplication().invokeAndWait({
       WriteAction.run<Throwable> {
         val parentPath = PathUtil.getParentPath(filePath)
         val fileName = PathUtil.getFileName(filePath)
         val parentVf = VfsUtil.createDirectoryIfMissing(projectRootVf, parentPath)
-          ?: throw RuntimeException("Failed to create directories for path: $parentPath")
+          ?: throw ToolResultException("Failed to create directories for path: $parentPath")
         val targetVf = parentVf.findChild(fileName) ?: parentVf.createChildData(this, fileName)
 
         VfsUtil.saveText(targetVf, content)
