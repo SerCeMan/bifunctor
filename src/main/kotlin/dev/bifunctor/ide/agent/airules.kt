@@ -105,6 +105,38 @@ class AiRuleServiceImpl : AiRuleService {
     null
   }
 
+  private fun splitGlobLine(globLine: String): List<String> {
+    val result = mutableListOf<String>()
+    var current = StringBuilder()
+    var braceLevel = 0
+    var i = 0
+    while (i < globLine.length) {
+      when (globLine[i]) {
+        '{' -> braceLevel++
+        '}' -> braceLevel--
+        ',' -> {
+          if (braceLevel == 0) {
+            if (current.isNotEmpty()) {
+              result.add(current.toString().trim())
+              current = StringBuilder()
+            }
+            i++
+            continue
+          }
+        }
+      }
+      current.append(globLine[i])
+      i++
+    }
+    if (braceLevel != 0) {
+      throw IllegalArgumentException("Unmatched braces in glob line: $globLine")
+    }
+    if (current.isNotEmpty()) {
+      result.add(current.toString().trim())
+    }
+    return result
+  }
+
   private fun parseMdcRule(file: VirtualFile): AiRule? {
     val content = file.readText()
     val lines = content.lines()
@@ -121,7 +153,7 @@ class AiRuleServiceImpl : AiRuleService {
         line.startsWith("globs:") -> {
           val globLine = line.substringAfter("globs:").trim()
           if (globLine.isNotEmpty()) {
-            val lineGlobs = globLine.split(",").map { it.trim() }
+            val lineGlobs = splitGlobLine(globLine)
             globs.addAll(lineGlobs)
           }
         }

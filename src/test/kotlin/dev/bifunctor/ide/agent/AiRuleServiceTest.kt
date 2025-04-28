@@ -37,4 +37,29 @@ class AiRuleServiceTest : BasePlatformTestCase() {
       "java-style-guide", "general-style-guide", "junie-guidelines"
     )
   }
+
+  fun testFindsBuildGradleKts() {
+    val service = AiRuleServiceImpl(project)
+    val buildGradleKts: VirtualFile = myFixture.findFileInTempDir(
+      "build.gradle.kts"
+    ) ?: error("build.gradle.kts was not copied to the temporary project")
+
+    val matchedKts = service.getRulesForFiles(listOf(buildGradleKts))
+
+    assertSize(3, matchedKts)
+    assertContainsElements(
+      matchedKts.map { it.name }, //
+      "kotlin-style-guide"
+    )
+
+    val buildGradle: VirtualFile = myFixture.findFileInTempDir(
+      "build.gradle"
+    ) ?: error("build.gradle was not copied to the temporary project")
+    val matchBuildGradle = service.getRulesForFiles(listOf(buildGradle))
+    assertSize(2, matchBuildGradle)
+    assertDoesntContain(
+      matchBuildGradle.map { it.name }, //
+      "kotlin-style-guide"
+    )
+  }
 }

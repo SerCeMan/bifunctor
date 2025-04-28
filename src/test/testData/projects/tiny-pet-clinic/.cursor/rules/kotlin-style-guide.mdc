@@ -1,6 +1,6 @@
 ---
 description: Ensure KDoc
-globs: src/main/java/**/*.kotlin
+globs: src/main/java/**/*.{kt,kts}, build.gradle.kts
 ---
 
 Make sure every kotlin file has a KDoc header.
