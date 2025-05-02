@@ -29,6 +29,10 @@
                 serviceInterface="dev.bifunctor.ide.agent.AiRuleService"
                 serviceImplementation="dev.bifunctor.ide.agent.AiRuleServiceImpl"/>
 
+        <projectService
+                serviceInterface="dev.bifunctor.ide.agent.prompts.PromptService"
+                serviceImplementation="dev.bifunctor.ide.agent.prompts.PromptServiceImpl"/>
+
         <applicationConfigurable
                 instance="dev.bifunctor.ide.ui.settings.BifSettingsConfigurable"
                 displayName="BiFunctor Settings"/>

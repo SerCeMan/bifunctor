@@ -62,4 +62,26 @@ class AiRuleServiceTest : BasePlatformTestCase() {
       "kotlin-style-guide"
     )
   }
+
+  fun testMatchGlob() {
+    val service = AiRuleServiceImpl(project)
+
+    // Test basic glob matching
+    assertTrue(service.matchGlob("*.java", "/path/to/file.java"))
+    assertFalse(service.matchGlob("*.java", "/path/to/file.kt"))
+
+    // Test directory matching
+    assertTrue(service.matchGlob("src/**/*.java", "/path/to/src/main/java/file.java"))
+    assertFalse(service.matchGlob("src/**/*.java", "/path/to/test/java/file.java"))
+
+    // Test multiple extensions
+    assertTrue(service.matchGlob("*.{java,kt}", "/path/to/file.java"))
+    assertTrue(service.matchGlob("*.{java,kt}", "/path/to/file.kt"))
+    assertFalse(service.matchGlob("*.{java,kt}", "/path/to/file.py"))
+
+    // Test complex patterns
+    assertTrue(service.matchGlob("**/*Test.{java,kt}", "/path/to/src/test/java/MyTest.java"))
+    assertTrue(service.matchGlob("**/*Test.{java,kt}", "/path/to/src/test/kotlin/MyTest.kt"))
+    assertFalse(service.matchGlob("**/*Test.{java,kt}", "/path/to/src/main/java/MyClass.java"))
+  }
 }

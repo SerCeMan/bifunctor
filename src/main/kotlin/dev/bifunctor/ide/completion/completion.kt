@@ -14,7 +14,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.util.TextRange
 import dev.bifunctor.ide.agent.ContextCollector
 import dev.bifunctor.ide.agent.LlmService
-import dev.bifunctor.ide.agent.Prompts
+import dev.bifunctor.ide.agent.prompts.Prompts
 import dev.bifunctor.ide.ui.settings.BifSettingsImpl
 import dev.bifunctor.ide.ui.settings.LlmKeyService
 import kotlin.time.Duration

@@ -7,6 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import dev.bifunctor.ide.agent.prompts.Prompt
+import dev.bifunctor.ide.agent.prompts.PromptService
+import dev.bifunctor.ide.agent.prompts.Prompts
 import dev.bifunctor.ide.ui.settings.BifSettingsImpl
 import dev.bifunctor.ide.ui.settings.LlmKeyService
 import dev.langchain4j.memory.chat.TokenWindowChatMemory
@@ -58,7 +61,7 @@ class ConversationImpl(
   private val messageList: LlmMessageList,
   private val maxTokens: Int,
   private val tokenizer: Tokenizer,
-  private val ruleService: AiRuleService,
+  private val promptService: PromptService,
   private val project: Project,
 ) : Conversation {
   override val convCtx: MutableState<QueryContext> = mutableStateOf(QueryContext())
@@ -78,7 +81,7 @@ class ConversationImpl(
 
         val prompt = Prompts.promptConversation(message)
         val currConvContext: QueryContext = convCtx.value
-        prompt.render(tokenizer, maxTokens, currConvContext, ruleService)
+        promptService.renderPrompt(prompt, tokenizer, maxTokens, currConvContext)
       }
     }
     hasStarted = true
@@ -189,11 +192,10 @@ interface LlmService {
 
 class LlmServiceImpl(private val project: Project) : LlmService {
   private val tools = project.getService(ToolService::class.java)
-  private val settings = service<BifSettingsImpl>()
   private val llmKeyService = service<LlmKeyService>()
   private val toolStateService = service<ToolStateService>()
   private val contextCollector = project.service<ContextCollector>()
-  private val ruleService: AiRuleService = project.service<AiRuleService>()
+  private val promptService: PromptService = project.service<PromptService>()
 
   override val initializedState: MutableState<Boolean>
     get() = llmKeyService.initializedState
@@ -233,7 +235,7 @@ class LlmServiceImpl(private val project: Project) : LlmService {
       .toolProvider(tools)
       .build()
 
-    return ConversationImpl(convId, contextCollector, assistant, maxMessages, memory, maxTokens, tokenizer, ruleService, project)
+    return ConversationImpl(convId, contextCollector, assistant, maxMessages, memory, maxTokens, tokenizer, promptService, project)
   }
 
   private fun chooseTokenizer(model: LlmModel): Tokenizer {
@@ -248,7 +250,7 @@ class LlmServiceImpl(private val project: Project) : LlmService {
 
   override fun askModel(model: LlmModel, prompt: Prompt, projectContext: QueryContext): Flow<String> = callbackFlow {
     val tokenizer = chooseTokenizer(model)
-    val textPrompt = prompt.render(tokenizer, model.maxTokens, projectContext, ruleService)
+    val textPrompt = promptService.renderPrompt(prompt, tokenizer, model.maxTokens, projectContext)
     if (textPrompt.isBlank()) {
       // Nothing to do
       close()

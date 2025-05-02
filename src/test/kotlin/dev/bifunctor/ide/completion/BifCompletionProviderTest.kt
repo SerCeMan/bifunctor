@@ -8,6 +8,7 @@ import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.registerServiceInstance
 import dev.bifunctor.ide.agent.*
+import dev.bifunctor.ide.agent.prompts.Prompt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList

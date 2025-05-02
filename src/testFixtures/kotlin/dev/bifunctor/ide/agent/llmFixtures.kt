@@ -3,6 +3,7 @@ package dev.bifunctor.ide.agent
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import dev.bifunctor.ide.agent.prompts.Prompt
 import dev.bifunctor.ide.ui.settings.BifSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

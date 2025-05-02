@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.isUnspecified
 import androidx.compose.ui.unit.dp
 import com.intellij.openapi.components.service
 import dev.bifunctor.ide.agent.*
+import dev.bifunctor.ide.agent.prompts.Prompts
 import dev.bifunctor.ide.ui.components.markdown.MarkdownText
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.*
